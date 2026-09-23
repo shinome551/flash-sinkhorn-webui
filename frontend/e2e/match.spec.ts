@@ -18,7 +18,7 @@ async function hoveredAndTop1(page: Page) {
 test('アップロード → 実行 → ホバーで対応先をハイライト', async ({ page }) => {
   await page.goto('/')
   await expect(page.getByTestId('run-blocker')).toContainText('画像 A と画像 B を選択してください')
-  await expect(page.getByRole('button', { name: '実行' })).toBeDisabled()
+  await expect(page.getByRole('banner').getByRole('button', { name: '実行' })).toBeDisabled()
 
   // 平行移動のペア: A の (x, y) の内容は B の (x + 32, y + 16) にある = パッチ 2 列・1 行ずれ
   await page.getByLabel(/画像 A をドロップ/).setInputFiles(path.join(SAMPLES, 'cat_a.jpg'))
@@ -26,7 +26,8 @@ test('アップロード → 実行 → ホバーで対応先をハイライト'
   await expect(page.getByText('400×272')).toHaveCount(2)
   await expect(page.getByTestId('run-blocker')).toHaveCount(0)
 
-  await page.getByRole('button', { name: '実行' }).click()
+  // パラメータパネル側のボタンでも実行できる
+  await page.getByRole('region', { name: 'パラメータ' }).getByRole('button', { name: '実行' }).click()
   const stats = page.getByRole('region', { name: '統計' })
   await expect(stats.getByText('合計')).toBeVisible({ timeout: 30_000 })
   await expect(stats).toContainText('A: 425 / B: 425')

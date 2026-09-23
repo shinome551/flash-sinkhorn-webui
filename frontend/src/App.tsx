@@ -120,6 +120,17 @@ function App() {
   const isNotFound = match.error instanceof ApiError && match.error.code === 'IMAGE_NOT_FOUND'
   const error = match.error && !(isNotFound && (expiredA || expiredB)) ? describeError(match.error) : null
 
+  // ヘッダーとパラメータパネルの両方に置く (画像を見ながらでも、パラメータを変えた直後でも押せるように)
+  const runButton = (
+    <RunButton
+      isPending={match.isPending}
+      onRun={run}
+      onCancel={match.cancel}
+      disabled={!canRun}
+      blocker={runBlocker}
+    />
+  )
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">
       <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 px-4 py-3 sm:px-6">
@@ -130,25 +141,7 @@ function App() {
             パッチ格子{patch && ` (${patch.size}px)`}
           </label>
           <HealthBadge />
-          {match.isPending ? (
-            <button
-              type="button"
-              onClick={match.cancel}
-              className="rounded bg-slate-700 px-4 py-1.5 text-sm font-medium text-slate-100 hover:bg-slate-600"
-            >
-              中断
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={run}
-              disabled={!canRun}
-              title={runBlocker}
-              className="rounded bg-sky-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
-            >
-              実行
-            </button>
-          )}
+          {runButton}
         </div>
       </header>
 
@@ -212,6 +205,8 @@ function App() {
             errors={parsed.ok ? {} : parsed.errors}
             onChange={(change) => setDraft((d) => ({ ...d, ...change }))}
             onReset={() => setDraft(DEFAULT_DRAFT)}
+            runButton={runButton}
+            runBlocker={match.isPending ? undefined : runBlocker}
             gridA={previewGridA}
             gridB={previewGridB}
             maxPatches={health?.limits.max_patches}
@@ -231,6 +226,40 @@ function App() {
         </div>
       </main>
     </div>
+  )
+}
+
+function RunButton({
+  isPending,
+  onRun,
+  onCancel,
+  disabled,
+  blocker,
+}: {
+  isPending: boolean
+  onRun: () => void
+  onCancel: () => void
+  disabled: boolean
+  blocker?: string
+}) {
+  return isPending ? (
+    <button
+      type="button"
+      onClick={onCancel}
+      className="rounded bg-slate-700 px-4 py-1.5 text-sm font-medium text-slate-100 hover:bg-slate-600"
+    >
+      中断
+    </button>
+  ) : (
+    <button
+      type="button"
+      onClick={onRun}
+      disabled={disabled}
+      title={blocker}
+      className="rounded bg-sky-600 px-4 py-1.5 text-sm font-medium text-white hover:bg-sky-500 disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-400"
+    >
+      実行
+    </button>
   )
 }
 

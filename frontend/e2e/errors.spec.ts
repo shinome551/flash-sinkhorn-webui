@@ -41,15 +41,17 @@ test('GPU なし: CPU の案内、flash 指定とパッチ数超過で実行を�
   // 400×272 / patch 16 = 425 パッチ > 上限 300。19px なら 21×14 = 294
   const blocker = page.getByTestId('run-blocker')
   await expect(blocker).toContainText('パッチ数が上限 (300) を超えています。patch size を 19 以上')
-  await expect(page.getByRole('button', { name: '実行' })).toBeDisabled()
+  await expect(page.getByRole('banner').getByRole('button', { name: '実行' })).toBeDisabled()
 
-  await page.getByLabel('size [px]').fill('19')
+  const size = page.getByLabel('size [px]')
+  for (let i = 0; i < 3; i++) await size.press('ArrowRight')
+  await expect(size).toHaveAttribute('aria-valuetext', '19')
   await expect(blocker).toHaveCount(0)
 
   await page.getByLabel('backend').selectOption('flash')
   await expect(blocker).toContainText('flash バックエンドは使えません')
   await expect(page.getByText('CUDA か flash-sinkhorn が無いので flash は使えません')).toBeVisible()
-  await expect(page.getByRole('button', { name: '実行' })).toBeDisabled()
+  await expect(page.getByRole('banner').getByRole('button', { name: '実行' })).toBeDisabled()
 })
 
 test('実行時のエラー (TOO_MANY_PATCHES) はサーバの hint と一緒に出す', async ({ page }) => {
@@ -67,7 +69,7 @@ test('実行時のエラー (TOO_MANY_PATCHES) はサーバの hint と一緒に
       },
     }),
   )
-  await page.getByRole('button', { name: '実行' }).click()
+  await page.getByRole('banner').getByRole('button', { name: '実行' }).click()
   const alert = page.getByRole('alert').filter({ hasText: 'パッチ数が上限を超えています' })
   await expect(alert).toContainText('Use patch size 20')
 })
@@ -77,7 +79,7 @@ test('実行中にサーバが落ちたら、停止の案内に切り替える',
   await loadShiftSample(page)
   await page.route('**/api/match', (route) => route.abort('connectionrefused'))
   await page.route('**/api/health', (route) => route.abort('connectionrefused'))
-  await page.getByRole('button', { name: '実行' }).click()
+  await page.getByRole('banner').getByRole('button', { name: '実行' }).click()
   await expect(page.getByRole('alert').filter({ hasText: 'サーバに接続できません' })).toBeVisible()
   await expect(page.getByText('バックエンドに接続できません')).toBeVisible()
 })

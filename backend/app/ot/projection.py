@@ -1,4 +1,4 @@
-"""``apply_plan_mat_flashstyle`` による O(nd) の重心射影 (SPEC 3.5 の代替経路、Phase 9)。
+"""``apply_plan_mat_flashstyle`` による O(nd) の重心射影 (SPEC 3.5 の代替経路)。
 
 ``summarize_plan`` (行チャンク) の変位と行質量を、``N×M`` を作らない Triton カーネルで独立に計算する。
 top-k やエントロピーは行全体が要るのでこの経路では出せず、API では使わない (照合用のリファレンス)。

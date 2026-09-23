@@ -1,11 +1,11 @@
-"""OT コアのベンチ (Phase 3)。N=M=768 (512x384 / patch16) と 3072 (patch8) で solve / plan の所要時間を測る。
+"""OT コアのベンチ。N=M=768 (512x384 / patch16) と 3072 (patch8) で solve / plan の所要時間を測る。
 
     uv run python -m scripts.bench_ot [--repeat 5] [--blur 0.05 0.2] [--backends flash dense] [--max-iters 500]
 
 特徴は合成テクスチャ画像 (tests/synth.py) の 2 枚から通常の経路 (pca 64 次元 + zscore) で作る。
 各設定で 1 回ウォームアップしてから ``--repeat`` 回の中央値を出す。行質量誤差は
 ``max_i |row_mass_i / a_i - 1|`` (収束の目安)。flash では O(nd) 重心射影 (``app.ot.projection``) の
-所要時間と、チャンク要約との変位の最大差 (px) も出す (Phase 9)。
+所要時間と、チャンク要約との変位の最大差 (px) も出す。
 """
 
 import argparse

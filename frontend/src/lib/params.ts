@@ -1,6 +1,6 @@
 // パラメータ入力欄の状態 (ParamDraft) と、`POST /api/match` のリクエストへの変換・検証。
 // 範囲と既定値はバックエンドの Pydantic スキーマ (backend/app/schemas/match.py) に合わせる。食い違ったらそちらが正。
-// 入力欄は途中状態 (空欄・"1e-") を許すため、数値も文字列のまま持つ。
+// 数値は画面のプリセット (PARAM_CONTROLS) から選ぶ。空欄 = null を表せるよう、値は文字列のまま持つ。
 
 import type { BackendChoice, FeatureType, MatchRequest, NormalizeMode } from '../api/types.ts'
 
@@ -87,6 +87,78 @@ export const NUMBER_SPECS: Record<NumericKey, NumberSpec> = {
   innerIterations: { integer: true, min: 1, max: 1000 },
   topK: { integer: true, min: 1, max: 10 },
   minWeight: { min: 0, max: 1, maxInclusive: false },
+}
+
+export interface Choice {
+  value: string
+  label: string
+}
+
+/** 数値項目の入力部品と、選べる値 (昇順。空欄 = null は意味の上で並ぶ位置に置く)。 */
+export interface ParamControl {
+  kind: 'slider' | 'select'
+  choices: Choice[]
+}
+
+const ints = (from: number, to: number) => Array.from({ length: to - from + 1 }, (_, i) => String(from + i))
+
+/** 0.01 未満の正の値は 1e-4 のような指数表記にする。 */
+const numberLabel = (v: string) => {
+  const x = Number(v)
+  return x > 0 && x < 0.01 ? x.toExponential() : v
+}
+
+const choices = (values: string[], blank?: string): Choice[] =>
+  values.map((value) => ({ value, label: value === '' ? (blank ?? '') : numberLabel(value) }))
+
+const REACH = ['0.05', '0.1', '0.2', '0.3', '0.5', '0.7', '1', '2', '5', '10', '']
+
+/**
+ * 各数値項目の選択肢。値は NUMBER_SPECS の範囲内で、DEFAULT_DRAFT の値を含む (テストで確認)。
+ * patch size / stride はサーバの hint (「size 19 以上」など) をそのまま選べるよう整数をすべて並べる。
+ * reach は大きいほど balanced に近いので、balanced (空欄) を右端に置く。
+ */
+export const PARAM_CONTROLS: Record<NumericKey, ParamControl> = {
+  patchSize: { kind: 'slider', choices: choices(ints(2, 64)) },
+  stride: { kind: 'slider', choices: choices(['', ...ints(1, 64)], 'size と同じ') },
+  pcaDim: { kind: 'select', choices: choices(['4', '8', '16', '32', '64', '128', '256']) },
+  positionWeight: {
+    kind: 'slider',
+    choices: choices(['0', '0.1', '0.2', '0.5', '1', '2', '5', '10', '20', '50', '100']),
+  },
+  blur: {
+    kind: 'slider',
+    choices: choices([
+      '0.01',
+      '0.02',
+      '0.03',
+      '0.05',
+      '0.07',
+      '0.1',
+      '0.15',
+      '0.2',
+      '0.3',
+      '0.5',
+      '0.7',
+      '1',
+      '2',
+      '5',
+      '10',
+    ]),
+  },
+  scaling: {
+    kind: 'slider',
+    choices: choices(['0.1', '0.2', '0.3', '0.4', '0.5', '0.6', '0.7', '0.8', '0.9', '0.95']),
+  },
+  reachX: { kind: 'slider', choices: choices(REACH, 'balanced') },
+  reachY: { kind: 'slider', choices: choices(REACH, 'balanced') },
+  threshold: {
+    kind: 'select',
+    choices: choices(['0.01', '0.001', '0.0001', '0.00001', '0.000001', ''], '打ち切りなし'),
+  },
+  innerIterations: { kind: 'select', choices: choices(['1', '5', '10', '20', '50', '100']) },
+  topK: { kind: 'slider', choices: choices(ints(1, 10)) },
+  minWeight: { kind: 'select', choices: choices(['0', '0.00001', '0.0001', '0.001', '0.01', '0.1']) },
 }
 
 export type ParamErrors = Partial<Record<NumericKey, string>>

@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_DRAFT,
   describeRange,
+  NUMBER_SPECS,
+  PARAM_CONTROLS,
+  type NumericKey,
   parseNumber,
   paramsOf,
   parseParams,
@@ -19,6 +22,26 @@ describe('describeRange', () => {
     expect(describeRange({ min: 0, minInclusive: false, max: 1, maxInclusive: false })).toBe('0 より大きく 1 未満の数')
     expect(describeRange({ min: 0, minInclusive: false })).toBe('0 より大きい数')
     expect(describeRange({ integer: true, min: 1 })).toBe('1 以上の整数')
+  })
+})
+
+describe('PARAM_CONTROLS', () => {
+  const keys = Object.keys(NUMBER_SPECS) as NumericKey[]
+
+  it('選択肢はすべて範囲内で重複がなく、既定値を含む', () => {
+    for (const key of keys) {
+      const values = PARAM_CONTROLS[key].choices.map((c) => c.value)
+      for (const v of values) expect(parseNumber(v, NUMBER_SPECS[key]), `${key}=${v}`).toMatchObject({ ok: true })
+      expect(new Set(values).size, key).toBe(values.length)
+      expect(values, key).toContain(DEFAULT_DRAFT[key])
+    }
+  })
+
+  it('空欄の選択肢には意味のあるラベルを付け、小さい値は指数表記にする', () => {
+    for (const key of keys) {
+      for (const c of PARAM_CONTROLS[key].choices) expect(c.label, `${key}=${c.value}`).not.toBe('')
+    }
+    expect(PARAM_CONTROLS.minWeight.choices.map((c) => c.label)).toEqual(['0', '1e-5', '1e-4', '1e-3', '0.01', '0.1'])
   })
 })
 

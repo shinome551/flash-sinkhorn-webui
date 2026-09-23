@@ -33,9 +33,7 @@ export function runBlocker(input: PreflightInput): string | undefined {
     const size = suggestPatchSize(gridA, gridB, max)
     return (
       `パッチ数が上限 (${max}) を超えています。` +
-      (size
-        ? `patch size を ${size} 以上 (stride は空欄 = size と同じ) にしてください。`
-        : '画像を小さくしてください。')
+      (size ? `patch size を ${size} 以上 (stride は「size と同じ」) にしてください。` : '画像を小さくしてください。')
     )
   }
   return undefined

@@ -2,6 +2,7 @@
 name = "flash-sinkhorn-webui-backend"
 version = "0.1.0"
 description = "FastAPI backend for patch matching via entropic optimal transport (flash-sinkhorn)"
+license = "MIT"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi",

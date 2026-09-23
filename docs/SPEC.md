@@ -1,6 +1,6 @@
 # flash-sinkhorn-webui 仕様書
 
-最終更新: 2026-09-21 / ステータス: Phase 7 まで実装済み (バックエンド完成、フロントは可視化の全モードとパラメータ UI まで)
+設計と実装上の取り決めをまとめた文書。使い方は [README](../README.ja.md)、開発の経緯は [DEVLOG.md](DEVLOG.md) を参照。
 
 ## 1. 概要
 
@@ -22,10 +22,10 @@ OT ソルバには [flash-sinkhorn](https://pypi.org/project/flash-sinkhorn/)
 3. スタイル/テクスチャの異なる2画像 → どの領域がどの領域に輸送されるか
 4. OT のパラメータ (blur, debias, unbalanced 等) が対応にどう効くかの教育的デモ
 
-### 1.2 非目標 (MVP スコープ外)
+### 1.2 非目標
 
 - 特徴点検出 (SIFT/SuperPoint 等) ベースのマッチング
-- 深層特徴 (DINOv2/CLIP) — Phase 9 のオプション拡張として扱う
+- 深層特徴の学習・ファインチューニング (事前学習済み DINOv2 による特徴はオプションで使える。3.3)
 - 認証・マルチユーザ・永続DB
 - 3枚以上の同時マッチング、動画
 
@@ -103,12 +103,12 @@ CLI やテストから直接呼べることで、Web 層を経由せずアルゴ
 出力: `X ∈ R^{N×d}`, `Y ∈ R^{M×d}` (float32, contiguous, CUDA)。
 PCA の基底は `X` と `Y` を連結して求め、両者に同じ射影を適用する。
 
-実装上の取り決め (Phase 2):
+実装上の取り決め:
 
 - 処理順は 基本特徴 → `normalize` → 位置チャンネル連結。位置チャンネルは正規化の影響を受けない。
 - `zscore` の平均・標準偏差も PCA と同様に `X` と `Y` を結合して 1 組だけ求める
   (画像ごとに正規化すると、2画像間の色分布の差が消えるため)。分散 0 の次元は 0 になる。
-- `zscore` は標準化のあと **`1/√d` 倍**する (Phase 3 で追加)。二乗距離の平均が次元数に依らず約 2
+- `zscore` は標準化のあと **`1/√d` 倍**する。二乗距離の平均が次元数に依らず約 2
   (単位ベクトル同士と同じ) になり、OT の `blur` を特徴の種類・次元から独立に選べる。
   無い場合、既定 (`pca` 64 次元) の二乗距離は平均約 128 で `blur=0.05` (ε=0.0025) の 5×10⁴ 倍になり、
   行質量が 10³¹ に発散した。`l2` は単位ベクトルなので二乗距離は 4 以下 (中心化した特徴なら約 2)、`none` は画素スケールのままなので `blur` を手動で選ぶ。
@@ -185,7 +185,7 @@ f, g, n_iters = sinkhorn_flashstyle_symmetric(
 
 列方向の統計 (`col_mass_j`) も同時に累積し、B 側の「受け取り量」ヒートマップに使う。
 
-**代替経路 (Phase 9)**: 変位場だけなら
+**代替経路**: 変位場だけなら
 `apply_plan_mat_flashstyle` に B 側パッチ中心座標行列を渡すことで
 O(nd) メモリのまま重心射影を得られる。チャンク実装のリファレンスとして検証に使う
 (`app/ot/projection.py`、`tests/test_projection.py`。API では使わない)。
@@ -197,7 +197,7 @@ O(nd) メモリのまま重心射影を得られる。チャンク実装のリ�
   所要時間は N=M=768 で 0.8 ms (チャンク要約全体は 4.9 ms)、3072 で 7 ms (同 72 ms)。
   top-k・エントロピー・`col_mass` は行全体が要るので、変位だけを置き換えても全体はほぼ速くならない。
 
-### 3.6 ハードマッチングモード (Phase 9, オプション)
+### 3.6 ハードマッチングモード
 
 `c_transform_fwd(X, Y, psi=g, cost_scale=...)` の argmin `j*(i) = argmin_j [C_ij - g_j]` により、
 エントロピー平滑化なしの 1 対 1 寄りの対応を得るモード。UI 上でソフト/ハードを切替 (再実行なし)。
@@ -299,7 +299,7 @@ O(nd) メモリのまま重心射影を得られる。チャンク実装のリ�
 }
 ```
 
-リクエストの取り決め (Phase 4):
+リクエストの取り決め:
 
 - 未知のキーは拒否する (`INVALID_PARAMS`)。`patch` / `feature` / `ot` / `output` は省略でき、省略時は上記の既定値。
 - `patch.stride` を省略すると `patch.size`。`ot.backend` を省略するとサーバ設定 `default_backend`。
@@ -310,7 +310,7 @@ O(nd) メモリのまま重心射影を得られる。チャンク実装のリ�
 - `ot.backend="flash"` を明示して CUDA / flash-sinkhorn が使えない場合は `INVALID_PARAMS` (422)。`auto` は dense へフォールバックする。
 - A・B のパッチ数の上限は、CUDA があれば `MAX_PATCHES`、無ければ `MAX_PATCHES_CPU` (どちらの `backend` でも同じ)。
 
-レスポンスの取り決め (Phase 4):
+レスポンスの取り決め:
 
 - `matches` は A 側パッチのインデックス `i` 昇順。`i = row * cols + col`。
 - `targets` は `weight` 降順、`min_weight` 未満は除外 (0 件もありうる)。
@@ -321,15 +321,15 @@ O(nd) メモリのまま重心射影を得られる。チャンク実装のリ�
   `sinkhorn_divergence` は `compute_divergence=false` またはバックエンド未対応 (dense の unbalanced) なら `null`。
 - `stats.elapsed_ms` のキーは `preprocess` (パッチ抽出。画像のデコードと GPU セマフォの待ち時間は含まない)、
   `features`, `solve`, `divergence` (無効なら 0), `plan`, `hard`, `total`。GPU は各段階の前後で同期して計測する。
-- `hard` / `hard_col_mass` / `stats.hard_agreement` はハード割当 (3.6、Phase 9)。`hard_col_mass` は `col_mass` と同じ規約。
-- `warnings` は `{"code", "message", "params"}` の配列 (Phase 8)。`message` は英語の説明で、フロントは `code` と `params` から
+- `hard` / `hard_col_mass` / `stats.hard_agreement` はハード割当 (3.6)。`hard_col_mass` は `col_mass` と同じ規約。
+- `warnings` は `{"code", "message", "params"}` の配列。`message` は英語の説明で、フロントは `code` と `params` から
   日本語の文言を作る (未知のコードは `message` をそのまま出す)。コードは次の 3 つ:
   - `PCA_DIM_REDUCED` (`requested`, `actual`): PCA 次元の切り詰め。
   - `ROW_MASS_ERROR` (`error`, `tolerance`, `converged`): balanced で `row_mass_error` が設定 `warn_row_mass_error` (既定 0.05) を超えた。
   - `NOT_CONVERGED` (`iterations`): unbalanced で `converged=false`。
   行質量が崩れても `p̃` は行ごとに正規化されるので表示は成立する。
 
-### 4.4.1 同梱サンプル (Phase 8)
+### 4.4.1 同梱サンプル
 
 - `GET /api/samples`: `[{"id", "title", "description"}]`。`assets/samples/samples.json` (設定 `samples_dir`) の一覧。無ければ空。
 - `POST /api/samples/{id}`: サンプルの 2 枚をアップロードと同じ前処理で画像ストアに登録し、
@@ -395,14 +395,14 @@ React 19 + TypeScript + Vite、状態管理は React 標準 hooks + TanStack Que
 | `coverage` | A 側を `row_mass`、B 側を `col_mass` で着色 (unbalanced の効果が見える) |
 | `pin` | クリックでパッチを固定し複数同時比較 |
 
-実装上の取り決め (Phase 7):
+実装上の取り決め:
 
 - ヒートマップ系 (`confidence` / `entropy` / `coverage`) でも hover の枠と接続線は併用する。クリック / Enter での pin は
   `pin` とヒートマップ系のみ。`hover` では受け付けず、`flow` では矢印と重なるので pin も hover の接続線も出さない (hover は A 側の枠のみ)。
   固定済みの pin は状態として残り、pin を受け付けるモードに戻ると再び描かれる。
 - 色は viridis。範囲は値の両端 2% を飽和させた分位点で、凡例に実際の範囲を出す。`coverage` は balanced だと 1.0 の近傍の数値誤差が
   強い模様になるので、1.0 の上下 ±0.1 を最低幅とする。
-- `coverage` の A 側 (送出量 `row_mass`) は Phase 9 で追加。色範囲は A・B の値をまとめて決める (同じ色が同じ値)。
+- `coverage` の A 側は送出量 `row_mass`。色範囲は A・B の値をまとめて決める (同じ色が同じ値)。
   ハード割当では A の各パッチがちょうど 1 回送るので B 側だけ塗る。
 - unbalanced の結果 (`row_mass_error` が `null`) では、`flow` の矢印と pin の対応先を送出量で薄くする
   (不透明度の係数 0.12 + 0.88·√min(row_mass, 1))。条件付き確率は行ごとに正規化した量なので、送出量が 0 に近い
@@ -410,12 +410,12 @@ React 19 + TypeScript + Vite、状態管理は React 標準 hooks + TanStack Que
   balanced でも未収束だと `row_mass` は 1.0 から数十 % ずれる (実測: 左右反転サンプルで 0.71〜1.23) ので、balanced では薄くしない。
 - `flow` の矢印は A 側パッチ中心から `displacement` (画像ピクセル) × 表示倍率。A の画像領域で切り取り、色は変位の大きさ。
   間引きは行・列とも k パッチおき (1〜8、既定 2)。色範囲は間引きに依存しない。
-  「確信度で薄く」(既定 on、Phase 8) では、確信度を色範囲と同じ分位点で [0, 1] に写し、不透明度 0.12〜1 にする
+  「確信度で薄く」(既定 on) では、確信度を色範囲と同じ分位点で [0, 1] に写し、不透明度 0.12〜1 にする
   (対応先の無い端のパッチが、拡散した分布の重心を指す長い矢印になって全体を読みにくくするため)。
 - 接続線の濃さ・太さ・色の基準は「相対 (各パッチの top-1 を 1、既定)」と「絶対 (条件付き確率そのまま)」を切り替えられる。
 - パラメータは `patch` / `feature` / `ot` / `output` の全項目を明示して送る (入力欄は文字列で保持し、範囲はバックエンドのスキーマに合わせて
   クライアントでも検証する。不正値があると「実行」は無効)。`ot.backend` の「サーバ設定」は `null` で送る。
-- 統計パネルは、同じ画像ペアで直前に成功した実行との数値差と、表示中の結果が現在のパラメータと異なる旨を出す。警告はコード別の日本語で表示する (Phase 8)。
+- 統計パネルは、同じ画像ペアで直前に成功した実行との数値差と、表示中の結果が現在のパラメータと異なる旨を出す。警告はコード別の日本語で表示する。
 - 結果 JSON は `{"request": ..., "response": ...}`。可視化 PNG は A・B を左右に並べ (画像 1 ピクセル = 2 出力ピクセル)、格子・ヒートマップ・
   矢印・pin の接続線を重ねる。hover は一時的なので含めない。凡例は幅が足りなければ 2 段にし、それでも入らなければ文字を縮める。
 
@@ -423,7 +423,7 @@ React 19 + TypeScript + Vite、状態管理は React 標準 hooks + TanStack Que
 
 - パラメータ変更は即実行せず「実行」ボタンで明示的に送信。実行中はスピナーと中断ボタン。
 - 結果 JSON のダウンロード、可視化 PNG の書き出し。
-- 画像未選択・エラー時のメッセージ表示。Phase 8 で次を追加:
+- 画像未選択・エラー時のメッセージ表示:
   - 実行前に分かる失敗 (画像未選択・不正なパラメータ・CUDA が無いのに `flash`・パッチ数超過) は「実行」を無効にして理由を出す
     (パッチ数超過は、両画像が収まる最小の patch size を添える)。
   - サーバ停止中は本文先頭に起動コマンドと「再接続」を出す。`/api/match` が `NETWORK_ERROR` になったら health を即再取得する。
@@ -436,9 +436,7 @@ React 19 + TypeScript + Vite、状態管理は React 標準 hooks + TanStack Que
 
 ```
 flash-sinkhorn-webui/
-├── SPEC.md
-├── TODO.md
-├── README.md
+├── README.md  README.ja.md  LICENSE
 ├── backend/
 │   ├── pyproject.toml            # uv 管理
 │   ├── app/
@@ -454,7 +452,7 @@ flash-sinkhorn-webui/
 │       ├── test_plan.py     test_backend_parity.py   # GPU 有無で skip
 │       └── test_api.py      test_samples.py
 ├── assets/samples/               # 同梱サンプル (samples.json + 画像 + CREDITS.md)
-├── docs/screenshot.png
+├── docs/                         # SPEC.md, DEVLOG.md, screenshot.png
 └── frontend/
     ├── package.json  vite.config.ts  playwright.config.ts  .prettierrc.json
     ├── e2e/{match,errors}.spec.ts  # Playwright
@@ -476,15 +474,14 @@ flash-sinkhorn-webui/
 - 開発: `pytest`, `pytest-asyncio`, `httpx`, `ruff`, `mypy`
 
 torch は CUDA ビルドを公開インデックス (`https://download.pytorch.org/whl/cu12x`)
-から取得する。`~/workspace/flash-sinkhorn` のローカルソースは **参照のみ**で、
-依存には使わず PyPI の `flash-sinkhorn` を入れる。
+から取得する。flash-sinkhorn は PyPI の公開パッケージを使う。
 
 **frontend** (`npm`)
 
 - `react`, `react-dom`, `@tanstack/react-query`
 - dev: `vite`, `@vitejs/plugin-react`, `typescript`, `tailwindcss`,
   `@types/react`, `@types/react-dom`, `oxlint`, `prettier`, `vitest`, `@playwright/test`
-  (lint は eslint ではなく oxlint。Phase 5 で採用し、Phase 8 で確定)
+  (lint は eslint ではなく oxlint)
 
 ## 8. 非機能要件
 
@@ -507,18 +504,3 @@ torch は CUDA ビルドを公開インデックス (`https://download.pytorch.o
 - **API**: `TestClient` でアップロード→マッチの一連を検証 (`dense` バックエンド強制)。
 - **フロント**: `vitest` で grid 座標変換と colormap などの純関数を単体テスト。E2E は Playwright (`npm run e2e`。
   アップロード → 実行 → ホバーでのハイライトと、API をモックしたエラー系 UI)。
-
-## 10. 実装順序と段階的マイルストン
-
-| マイルストン | 内容 | 完了条件 |
-|---|---|---|
-| M1 | バックエンド骨格 + 画像アップロード | `/api/health` と画像往復が動く |
-| M2 | マッチングコア (CPU dense) | CLI/pytest で対応が取れる |
-| M3 | flash-sinkhorn 統合 | GPU で M2 と整合する結果、速度目標達成 |
-| M4 | `/api/match` 公開 | curl で完全なレスポンスが得られる |
-| M5 | フロント骨格 + 画像表示 | 2枚アップロードして並べて表示 |
-| M6 | 可視化 (hover / 接続線) | パッチ対応が目視できる |
-| M7 | ヒートマップ・フロー・パラメータUI | 全モード動作 |
-| M8 | 仕上げ (エラー処理・README・E2E) | 初見ユーザが手順書どおり動かせる |
-
-詳細な作業項目は `TODO.md` を参照。

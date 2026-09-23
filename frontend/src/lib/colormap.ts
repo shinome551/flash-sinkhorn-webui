@@ -38,7 +38,7 @@ export function viridisCss(t: number): string {
 
 /**
  * [lo, hi] を [0, 1] に正規化して viridis に通す。`hi <= lo` (定数場) は中間色 (0.5) を返す。
- * ヒートマップ (Phase 7) で値域を揃えるのに使う。
+ * ヒートマップで値域を揃えるのに使う。
  */
 export function viridisScaled(value: number, lo: number, hi: number): string {
   if (!(hi > lo)) return viridisCss(0.5)
