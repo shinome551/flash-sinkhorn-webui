@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# Node
+node_modules/
+frontend/dist/
+*.tsbuildinfo
+npm-debug.log*
+
+# Runtime / uploaded images
+backend/tmp/
+backend/data/
+*.tmp
+.tmp/
+
+# Env / editor / OS
+.env
+.env.*
+!.env.example
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Test artifacts
+frontend/playwright-report/
+frontend/test-results/
+
+# Playwright
+.playwright-mcp/

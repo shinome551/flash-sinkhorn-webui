@@ -1,0 +1,58 @@
+[project]
+name = "flash-sinkhorn-webui-backend"
+version = "0.1.0"
+description = "FastAPI backend for patch matching via entropic optimal transport (flash-sinkhorn)"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "python-multipart",
+    "pydantic",
+    "pydantic-settings",
+    "pillow",
+    "numpy",
+    "torch>=2.5",
+    "triton>=3.1",
+    "flash-sinkhorn>=0.3.3",
+]
+
+[project.optional-dependencies]
+# 深層特徴 (feature.type = "dinov2")。`uv sync --extra deep`
+deep = [
+    "timm>=1.0",
+    "torchvision",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "httpx",
+    "ruff",
+    "mypy",
+]
+
+[tool.uv]
+package = false
+
+# torch は CUDA ビルドを公開インデックスから取得する (PyPI の既定 wheel は使わない)
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }
+torchvision = { index = "pytorch-cu128" }
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true

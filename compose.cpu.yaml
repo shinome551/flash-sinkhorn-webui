@@ -1,0 +1,4 @@
+# GPU なしで動かすための上書き (dense バックエンド、パッチ数の上限 1024)
+services:
+  app:
+    deploy: !reset {}

@@ -1,0 +1,23 @@
+[
+  {
+    "id": "shift",
+    "title": "平行移動",
+    "description": "同じ写真を右下へ (32, 16) px ずらした 2 枚。フローモードで一様な矢印になる。",
+    "a": "cat_a.jpg",
+    "b": "cat_b.jpg"
+  },
+  {
+    "id": "mirror",
+    "title": "左右反転",
+    "description": "512×384 の写真とその鏡像 (patch 16 で N = M = 768)。対応先が左右対称の位置になる。",
+    "a": "astronaut.jpg",
+    "b": "astronaut_mirror.jpg"
+  },
+  {
+    "id": "different",
+    "title": "別の写真",
+    "description": "コーヒーと猫。色や模様の近いパッチどうしが対応し、カバレッジで受け取りの偏りが見える。",
+    "a": "coffee.jpg",
+    "b": "cat.jpg"
+  }
+]

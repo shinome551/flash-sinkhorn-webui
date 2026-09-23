@@ -1,0 +1,21 @@
+# 起動: docker compose up --build  ->  http://localhost:8000
+# GPU なしの環境: docker compose -f compose.yaml -f compose.cpu.yaml up --build
+services:
+  app:
+    build: .
+    image: flash-sinkhorn-webui
+    ports:
+      - "${FSW_PORT:-8000}:8000"
+    volumes:
+      # DINOv2 の重みと Triton のコンパイル結果を再起動後も使う
+      - cache:/cache
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+volumes:
+  cache:
